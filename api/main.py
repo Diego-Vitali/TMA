@@ -1,0 +1,82 @@
+import pandas as pd
+from fastapi import FastAPI
+from pydantic import BaseModel
+import pickle
+from typing import Optional
+import traceback
+
+class FreightInput(BaseModel):
+    Peso_total_bruto: float
+    Metro_cúbico: float
+    Valor_NF: float
+    Volume_NF: int
+    Tipo_de_frete_NF: str
+    Via_de_transporte: str
+    UF_emitente_NF: str
+    UF_destinatário_NF: str
+
+    class Config:
+        alias_generator = lambda string: string.replace('_', ' ')
+        allow_population_by_field_name = True
+
+## Caminhos dos artefatos ##
+MODEL_PATH = "api/api_artifacts/TMA_Model.pkl"
+SCALER_PATH = "api/api_artifacts/TMA_Preprocessor.pkl"
+
+## Colunas Categoricas e Numericas ##
+NUM_COLS = ["Peso total bruto", "Metro cúbico", "Valor NF", "Volume NF"]
+CAT_COLS = ['Tipo de frete NF', 'Via de transporte', "UF emitente NF", "UF destinatário NF"]
+
+## Carregando os artefatos ##
+try:
+    with open(MODEL_PATH, "rb") as f:
+        model = pickle.load(f)
+
+    with open(SCALER_PATH, "rb") as f:
+        preprocessor = pickle.load(f)
+
+except FileNotFoundError:
+    print(f"Erro Crítico: Não foi possível carregar os arquivos .pkl.")
+    print(f"Verifique os caminhos: {MODEL_PATH} e {SCALER_PATH}")
+    model = None
+    scaler = None
+    model_columns = []
+except AttributeError:
+    print("Erro Crítico: O modelo carregado não possui o atributo 'feature_names_in_'.")
+    model = None 
+    scaler = None
+    model_columns = []
+except Exception as e:
+    print(f"Erro inesperado ao carregar modelos: {e}")
+    model = None
+    scaler = None
+    model_columns = []
+
+
+app = FastAPI()
+
+@app.get("/")
+async def root():
+    return {"Mensagem": "Teste API TMA"}
+
+@app.post("/predict/")
+async def predict(data: FreightInput):
+    try:
+        # Suponha que 'data' seja o objeto recebido pela API
+        data_dict_aliased = data.model_dump(by_alias=True)
+        input_data = pd.DataFrame([data_dict_aliased])
+
+        # Aplicar o mesmo pré-processamento do treino
+        input_data_processed = preprocessor.transform(input_data)
+
+        # Fazer previsão
+        prediction = model.predict(input_data_processed)
+
+        return {"predicted_transit_time": prediction[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+if __name__ == "__main__":
+    import uvicorn
+    # 'app_simplificado:app' faz o uvicorn procurar o objeto 'app' no arquivo 'app_simplificado.py'
+    uvicorn.run(app, host="0.0.0.0", port=8000)
