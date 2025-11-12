@@ -62,7 +62,6 @@ async def root():
 @app.post("/predict/")
 async def predict(data: FreightInput):
     try:
-        # Suponha que 'data' seja o objeto recebido pela API
         data_dict_aliased = data.model_dump(by_alias=True)
         input_data = pd.DataFrame([data_dict_aliased])
 
@@ -78,5 +77,4 @@ async def predict(data: FreightInput):
 
 if __name__ == "__main__":
     import uvicorn
-    # 'app_simplificado:app' faz o uvicorn procurar o objeto 'app' no arquivo 'app_simplificado.py'
     uvicorn.run(app, host="0.0.0.0", port=8000)
