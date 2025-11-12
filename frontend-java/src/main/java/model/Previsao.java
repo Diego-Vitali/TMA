@@ -1,49 +1,55 @@
 package model;
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class Previsao {
-
     private final String API_URL = "http://localhost:8000/predict/";
+
     public String realizarPrevisao(
             float pesoBrutoInput, float metroCubicoInput, float valorMercadoriaInput,
-            int quantidadeVolumesInput, String tipoFreteInput, String viaTransporteInput, String ufOrigemInput,
-            String ufDestinoInput) {
-
-        HttpClient client = HttpClient.newHttpClient();
+            int quantidadeVolumesInput, String tipoFreteInput, String viaTransporteInput,
+            String ufOrigemInput, String ufDestinoInput) {
 
         String jsonBody = "{" +
-            "\"Peso total bruto\": " + pesoBrutoInput + "," +
-            "\"Metro cúbico\": " + metroCubicoInput + "," +
-            "\"Valor NF\": " + valorMercadoriaInput + "," +
-            "\"Volume NF\": " + quantidadeVolumesInput + "," +
-            "\"Tipo de frete NF\": \"" + tipoFreteInput + "\"," +
-            "\"Via de transporte\": \"" + viaTransporteInput + "\"," +
-            "\"UF emitente NF\": \"" + ufOrigemInput + "\"," +
-            "\"UF destinatário NF\": \"" + ufDestinoInput + "\"" +
-            "}";
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                .build();
+                "\"Peso total bruto\": " + pesoBrutoInput + "," +
+                "\"Metro cúbico\": " + metroCubicoInput + "," +
+                "\"Valor NF\": " + valorMercadoriaInput + "," +
+                "\"Volume NF\": " + quantidadeVolumesInput + "," +
+                "\"Tipo de frete NF\": \"" + tipoFreteInput + "\"," +
+                "\"Via de transporte\": \"" + viaTransporteInput + "\"," +
+                "\"UF emitente NF\": \"" + ufOrigemInput + "\"," +
+                "\"UF destinatário NF\": \"" + ufDestinoInput + "\"" +
+                "}";
 
         try {
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            URL url = new URL(API_URL);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("POST");
+            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            con.setDoOutput(true);
 
-            if (response.statusCode() == 200) {
-                return response.body(); 
-            } else {
-                System.err.println("Erro ao chamar API: " + response.statusCode());
-                return "{\"erro\": \"API retornou status " + response.statusCode() + "\"}";
+            try (OutputStream os = con.getOutputStream()) {
+                byte[] input = jsonBody.getBytes("UTF-8");
+                os.write(input, 0, input.length);
             }
 
-        } catch (IOException | InterruptedException e) {
-            System.err.println("Erro de conexão: " + e.getMessage());
+            int code = con.getResponseCode();
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    con.getInputStream(), "UTF-8"));
+            StringBuilder response = new StringBuilder();
+            String responseLine;
+            while ((responseLine = br.readLine()) != null) {
+                response.append(responseLine.trim());
+            }
+
+            System.out.println("Status: " + code);
+            System.out.println("Resposta: " + response);
+
+            return response.toString();
+
+        } catch (Exception e) {
             e.printStackTrace();
             return "{\"erro\": \"Falha na conexão com a API\"}";
         }

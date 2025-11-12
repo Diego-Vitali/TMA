@@ -71,7 +71,9 @@
                 },
                 
                 success: function(responseJson) {
-                    $("#resultadoSpan").text(responseJson.transitTimeOutput + " dias");
+                    let dias = Number(responseJson.transitTimeOutput);
+                    let diasArredondado = Math.round(dias);
+                    $("#resultadoSpan").text(diasArredondado + " dias");
                 },
                 
                 error: function(xhr, status, error) {

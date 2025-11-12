@@ -1,5 +1,5 @@
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import pickle
 from typing import Optional
@@ -17,11 +17,12 @@ class FreightInput(BaseModel):
 
     class Config:
         alias_generator = lambda string: string.replace('_', ' ')
+        populate_by_name = True
         allow_population_by_field_name = True
 
 ## Caminhos dos artefatos ##
-MODEL_PATH = "api/api_artifacts/TMA_Model.pkl"
-SCALER_PATH = "api/api_artifacts/TMA_Preprocessor.pkl"
+MODEL_PATH = "api_artifacts/TMA_Model.pkl"
+SCALER_PATH = "api_artifacts/TMA_Preprocessor.pkl"
 
 ## Colunas Categoricas e Numericas ##
 NUM_COLS = ["Peso total bruto", "Metro cúbico", "Valor NF", "Volume NF"]
@@ -61,6 +62,7 @@ async def root():
 
 @app.post("/predict/")
 async def predict(data: FreightInput):
+    print(data)
     try:
         data_dict_aliased = data.model_dump(by_alias=True)
         input_data = pd.DataFrame([data_dict_aliased])
@@ -68,7 +70,6 @@ async def predict(data: FreightInput):
         # Aplicar o mesmo pré-processamento do treino
         input_data_processed = preprocessor.transform(input_data)
 
-        # Fazer previsão
         prediction = model.predict(input_data_processed)
 
         return {"predicted_transit_time": prediction[0]}
